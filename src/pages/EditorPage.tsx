@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { useFileStore } from '../store/useFileStore'
-import { mergeFiles } from '../utils/pdfMerger'
 import { generateThumbnail } from '../utils/thumbnailGenerator'
 import { autoCorrectFromFile, canvasToFile } from '../utils/documentScanner'
+import { scanInvoiceQR } from '../utils/qrScanner'
+import { buildCsv, downloadCsv } from '../utils/csvExporter'
+import { sha256Hex } from '../utils/fileHash'
 import SortableFileList from '../components/SortableFileList'
+import FilePreviewModal from '../components/FilePreviewModal'
+import LoadingOverlay from '../components/LoadingOverlay'
 import type { UploadedFile } from '../types'
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,image/jpeg,image/png,application/pdf'
@@ -23,12 +27,29 @@ export default function EditorPage() {
   const resetEnhanceOptions = useFileStore((s) => s.resetEnhanceOptions)
 
   const updateFile = useFileStore((s) => s.updateFile)
+  const removeDuplicates = useFileStore((s) => s.removeDuplicates)
 
   const [enhanceOpen, setEnhanceOpen] = useState(false)
   const [scanOpen, setScanOpen] = useState(false)
   const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState<{ success: number; failed: number } | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(
+    null
+  )
+  const [isAdding, setIsAdding] = useState(false)
+  const [addProgress, setAddProgress] = useState<{ current: number; total: number } | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const previewFile = previewId ? files.find((f) => f.id === previewId) ?? null : null
+
+  const dupHashes = new Map<string, number>()
+  for (const f of files) {
+    if (f.dup) dupHashes.set(f.hash, (dupHashes.get(f.hash) ?? 0) + 1)
+  }
+  let dupRemovableCount = 0
+  for (const n of dupHashes.values()) dupRemovableCount += n - 1
 
   // Guard: redirect if no files
   useEffect(() => {
@@ -46,22 +67,37 @@ export default function EditorPage() {
       const selected = e.target.files
       if (!selected || selected.length === 0) return
 
-      const newFiles: UploadedFile[] = []
-      for (const file of Array.from(selected)) {
-        const thumbnailUrl = await generateThumbnail(file)
-        const type = file.type === 'application/pdf' ? 'pdf' : 'image'
-        newFiles.push({
-          id: crypto.randomUUID(),
-          file,
-          name: file.name,
-          type,
-          thumbnailUrl,
-          rotation: 0,
-        })
+      const list = Array.from(selected)
+      setIsAdding(true)
+      setAddProgress({ current: 0, total: list.length })
+      try {
+        const newFiles: UploadedFile[] = []
+        for (let i = 0; i < list.length; i++) {
+          const file = list[i]
+          const [thumb, hash] = await Promise.all([
+            generateThumbnail(file),
+            sha256Hex(file),
+          ])
+          const type = file.type === 'application/pdf' ? 'pdf' : 'image'
+          newFiles.push({
+            id: crypto.randomUUID(),
+            file,
+            name: file.name,
+            hash,
+            type,
+            thumbnailUrl: thumb.thumbnailUrl,
+            pageCount: thumb.pageCount,
+            rotation: 0,
+          })
+          setAddProgress({ current: i + 1, total: list.length })
+        }
+        addFiles(newFiles)
+      } finally {
+        setIsAdding(false)
+        setAddProgress(null)
+        // Reset input so same file can be re-selected
+        e.target.value = ''
       }
-      addFiles(newFiles)
-      // Reset input so same file can be re-selected
-      e.target.value = ''
     },
     [addFiles]
   )
@@ -70,6 +106,7 @@ export default function EditorPage() {
     if (isMerging || files.length === 0) return
     useFileStore.setState({ isMerging: true })
     try {
+      const { mergeFiles } = await import('../utils/pdfMerger')
       const bytes = await mergeFiles(files, enhanceOptions)
       const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
@@ -82,6 +119,32 @@ export default function EditorPage() {
       useFileStore.setState({ isMerging: false })
     }
   }, [files, isMerging, setMergedPdf, navigate, enhanceOptions])
+
+  const handleExportCsv = useCallback(async () => {
+    if (isExporting || isMerging) return
+    const current = useFileStore.getState().files
+    if (current.length === 0) return
+
+    const toScan = current.filter((f) => f.qrContent === undefined)
+    if (toScan.length > 0) {
+      setIsExporting(true)
+      setExportProgress({ current: 0, total: toScan.length })
+      try {
+        for (let i = 0; i < toScan.length; i++) {
+          const f = toScan[i]
+          const result = await scanInvoiceQR(f.file)
+          updateFile(f.id, { qrContent: result ?? null })
+          setExportProgress({ current: i + 1, total: toScan.length })
+        }
+      } finally {
+        setIsExporting(false)
+        setExportProgress(null)
+      }
+    }
+
+    const fresh = useFileStore.getState().files
+    downloadCsv(buildCsv(fresh))
+  }, [isExporting, isMerging, updateFile])
 
   const handleAutoCorrect = useCallback(async () => {
     const imageFiles = files.filter((f) => f.type === 'image')
@@ -98,7 +161,7 @@ export default function EditorPage() {
         const result = await autoCorrectFromFile(item.file)
         if (result.success && result.canvas) {
           const correctedFile = await canvasToFile(result.canvas, item.name)
-          const thumbnailUrl = await generateThumbnail(correctedFile)
+          const { thumbnailUrl } = await generateThumbnail(correctedFile)
           updateFile(item.id, { file: correctedFile, thumbnailUrl })
           success++
         } else {
@@ -123,8 +186,21 @@ export default function EditorPage() {
         <div className="mx-auto max-w-5xl px-4 py-3 flex flex-wrap items-center gap-3">
           {/* File count */}
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-            已选择 {files.length} 个文件
+            共 {files.length} 个文件
           </span>
+
+          {/* Duplicate cleanup */}
+          {dupRemovableCount > 0 && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+              onClick={removeDuplicates}
+              disabled={isMerging || isExporting || isAdding}
+              title="保留每组重复文件中的第一个，移除其余"
+            >
+              一键去除 {dupRemovableCount} 个重复文件
+            </button>
+          )}
 
           <div className="flex-1" />
 
@@ -133,9 +209,22 @@ export default function EditorPage() {
             type="button"
             className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
             onClick={handleAddMore}
-            disabled={isMerging}
+            disabled={isMerging || isExporting || isAdding}
           >
             + 添加更多
+          </button>
+
+          {/* Export CSV */}
+          <button
+            type="button"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            onClick={handleExportCsv}
+            disabled={isExporting || isMerging || isAdding || files.length === 0}
+          >
+            {isExporting && (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            )}
+            {isExporting ? '识别中...' : '导出 CSV'}
           </button>
 
           {/* Merge */}
@@ -143,7 +232,7 @@ export default function EditorPage() {
             type="button"
             className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             onClick={handleMerge}
-            disabled={isMerging}
+            disabled={isMerging || isExporting || isAdding}
           >
             {isMerging && (
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -170,6 +259,7 @@ export default function EditorPage() {
           onReorder={reorderFiles}
           onRemove={removeFile}
           onRotate={rotateFile}
+          onPreview={setPreviewId}
         />
 
         {/* Image Enhancement Panel */}
@@ -279,7 +369,7 @@ export default function EditorPage() {
                 type="button"
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 onClick={handleAutoCorrect}
-                disabled={isScanning || isMerging || files.filter((f) => f.type === 'image').length === 0}
+                disabled={isScanning || isMerging || isExporting || isAdding || files.filter((f) => f.type === 'image').length === 0}
               >
                 {isScanning && (
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -308,14 +398,26 @@ export default function EditorPage() {
         </div>
       </div>
 
-      {/* Merge overlay */}
-      {isMerging && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="rounded-2xl bg-white px-8 py-6 shadow-xl flex flex-col items-center gap-3">
-            <span className="inline-block h-8 w-8 animate-spin rounded-full border-3 border-blue-200 border-t-blue-600" />
-            <p className="text-sm font-medium text-gray-700">正在合并文件...</p>
-          </div>
-        </div>
+      {/* Hi-res preview */}
+      {previewFile && (
+        <FilePreviewModal file={previewFile} onClose={() => setPreviewId(null)} />
+      )}
+
+      {/* Merge / export / add overlay */}
+      {isMerging && <LoadingOverlay message="正在合并文件" />}
+      {!isMerging && isExporting && (
+        <LoadingOverlay
+          message="正在识别二维码"
+          current={exportProgress?.current}
+          total={exportProgress?.total}
+        />
+      )}
+      {!isMerging && !isExporting && isAdding && (
+        <LoadingOverlay
+          message="正在加载文件"
+          current={addProgress?.current}
+          total={addProgress?.total}
+        />
       )}
     </div>
   )

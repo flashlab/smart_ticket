@@ -3,8 +3,8 @@ import FileUploader from '../components/FileUploader'
 const features = [
   {
     icon: '✨',
-    title: '免费无水印',
-    desc: '合并PDF无任何水印，完全免费使用',
+    title: '导出表格',
+    desc: '识别发票二维码上的开票日期、发票号码、金额等信息',
   },
   {
     icon: '🔒',

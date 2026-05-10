@@ -2,8 +2,8 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { saveAs } from 'file-saver'
 import { useFileStore } from '../store/useFileStore'
-import aliPay from '../assets/ali_pay.jpg'
-import wxPay from '../assets/wx_pay.png'
+import aliPay from '../assets/telegram.jpg'
+import wxPay from '../assets/wechat.jpg'
 
 export default function ResultPage() {
   const navigate = useNavigate()
@@ -103,15 +103,15 @@ export default function ResultPage() {
 
         {/* Donate Section */}
         <div className="text-center">
-          <p className="text-xs text-gray-400 mb-2">☕ 打赏支持</p>
+          <p className="text-xs text-gray-400 mb-2">💬 联系我</p>
           <div className="flex gap-3 justify-center">
             <div className="text-center">
               <img src={aliPay} alt="支付宝" className="w-20 h-20 rounded-lg border border-gray-200" />
-              <p className="text-xs text-gray-400 mt-1">支付宝</p>
+              <p className="text-xs text-gray-400 mt-1">telegram</p>
             </div>
             <div className="text-center">
               <img src={wxPay} alt="微信支付" className="w-20 h-20 rounded-lg border border-gray-200" />
-              <p className="text-xs text-gray-400 mt-1">微信支付</p>
+              <p className="text-xs text-gray-400 mt-1">微信</p>
             </div>
           </div>
         </div>

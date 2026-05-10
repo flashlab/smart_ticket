@@ -14,7 +14,7 @@
 [![UnoCSS](https://img.shields.io/badge/UnoCSS-Atomic-333?logo=unocss&logoColor=white)](https://unocss.dev/)
 [![pdf-lib](https://img.shields.io/badge/pdf--lib-PDF_Engine-red)](https://pdf-lib.js.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/Demo-Live-brightgreen?logo=github)](https://cdk1025.github.io/smart_ticket/)
+[![Cloudflare Pages](https://img.shields.io/badge/Demo-Live-brightgreen?logo=cloudflare)](https://smart-ticket.pages.dev/)
 
 English | [中文](README.zh-CN.md)
 
@@ -28,9 +28,11 @@ English | [中文](README.zh-CN.md)
 
 No server. No upload. **100% local processing.** Your documents never leave your device.
 
+Forked from https://github.com/cdk1025/smart_ticket
+
 ### 🌐 Live Demo
 
-👉 **[https://cdk1025.github.io/smart_ticket/](https://cdk1025.github.io/smart_ticket/)**
+👉 **[https://smart-ticket.pages.dev](https://smart-ticket.pages.dev)**
 
 ## 📸 Screenshots
 
@@ -48,10 +50,11 @@ No server. No upload. **100% local processing.** Your documents never leave your
 - 📄 **One-click merge** — generate a clean A4 PDF in seconds
 - 👁️ **Browser preview** — review the result before downloading
 - ⬇️ **Instant download** — save your merged PDF with one click
+- 📋 **invoice barcode export** - batch scan invoice QR codes to export CSV
 - 🔒 **Pure client-side** — zero server, zero upload, privacy safe
 - 🎨 **Image Enhancement** — Adjust contrast, brightness, and sharpness before merging (Canvas API)
 - 🔍 **Smart Document Correction** — Auto edge detection & perspective correction for photographed invoices (Scanic WASM)
-- 🔄 **Smart upload modes** — Replace mode on homepage, append mode on editor page
+- 🔄 **Smart upload modes** — Replace mode on homepage, append mode on editor page, one-key to filter out duplicate files
 - 📜 **Privacy Policy & Disclaimer** — Dedicated pages for legal transparency
 - ☕ **Donate support** — Alipay & WeChat Pay
 
@@ -72,7 +75,7 @@ No server. No upload. **100% local processing.** Your documents never leave your
 
 ```bash
 # Clone the repository
-git clone https://github.com/cdk1025/smart_ticket.git
+git clone https://github.com/flashlab/smart_ticket.git
 cd smart_ticket
 
 # Install dependencies
@@ -86,12 +89,13 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ### 📦 Deployment
 
-This project is configured for **GitHub Pages** deployment:
+This project is configured for **Cloudflare Pages** deployment:
 
 ```bash
 npm run deploy
 ```
 
+run `npx wrangler login` to authenticate, and ensure a CF Pages project named smart-ticket exists (or create on first deploy via the dashboard / `wrangler pages project create smart-ticket`).
 ### 🗺️ Roadmap
 
 - [ ] 🤖 AI invoice classification & categorization
@@ -104,20 +108,3 @@ npm run deploy
 
 This project is licensed under the [MIT License](LICENSE).
 
-## 🙏 Acknowledgments
-
-- [LINUX DO](https://linux.do/) — Community support and inspiration
-
----
-
-<div align="center">
-
-## ☕ Donate
-
-If this project helps you, consider buying me a coffee!
-
-| Alipay | WeChat Pay |
-|:---:|:---:|
-| <img src="src/assets/ali_pay.jpg" width="200"> | <img src="src/assets/wx_pay.png" width="200"> |
-
-</div>

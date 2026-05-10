@@ -24,16 +24,19 @@ interface SortableFileListProps {
   onReorder: (files: UploadedFile[]) => void
   onRemove: (id: string) => void
   onRotate: (id: string) => void
+  onPreview?: (id: string) => void
 }
 
 function SortableItem({
   file,
   onRemove,
   onRotate,
+  onPreview,
 }: {
   file: UploadedFile
   onRemove: (id: string) => void
   onRotate: (id: string) => void
+  onPreview?: (id: string) => void
 }) {
   const {
     attributes,
@@ -57,6 +60,7 @@ function SortableItem({
         file={file}
         onRemove={onRemove}
         onRotate={onRotate}
+        onPreview={onPreview}
         dragHandleProps={listeners}
       />
     </div>
@@ -68,6 +72,7 @@ export default function SortableFileList({
   onReorder,
   onRemove,
   onRotate,
+  onPreview,
 }: SortableFileListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -109,6 +114,7 @@ export default function SortableFileList({
               file={file}
               onRemove={onRemove}
               onRotate={onRotate}
+              onPreview={onPreview}
             />
           ))}
         </div>

@@ -14,7 +14,7 @@
 [![UnoCSS](https://img.shields.io/badge/UnoCSS-Atomic-333?logo=unocss&logoColor=white)](https://unocss.dev/)
 [![pdf-lib](https://img.shields.io/badge/pdf--lib-PDF_Engine-red)](https://pdf-lib.js.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/Demo-Live-brightgreen?logo=github)](https://cdk1025.github.io/smart_ticket/)
+[![Cloudflare Pages](https://img.shields.io/badge/Demo-Live-brightgreen?logo=cloudflare)](https://smart-ticket.pages.dev/)
 
 [English](README.md) | 中文
 
@@ -30,9 +30,11 @@
 
 无需服务器，无需上传，**100% 本地处理**。您的文件永远不会离开您的设备。
 
+原项目链接：https://github.com/cdk1025/smart_ticket
+
 ### 🌐 在线体验
 
-👉 **[https://cdk1025.github.io/smart_ticket/](https://cdk1025.github.io/smart_ticket/)**
+👉 **[https://smart-ticket.pages.dev](https://smart-ticket.pages.dev)**
 
 ## 📸 效果展示
 
@@ -50,10 +52,11 @@
 - 📄 **一键合并** — 秒级生成整洁的 A4 PDF
 - 👁️ **浏览器预览** — 下载前预览合并结果
 - ⬇️ **即时下载** — 一键保存合并后的 PDF
+- 📋 **发票信息导出** - 批量扫描发票二维码导出表格
 - 🔒 **纯客户端处理** — 零服务器、零上传，隐私安全
 - 🎨 **图像增强** — 合并前可调节对比度、亮度、锐化（Canvas API 原生处理）
 - 🔍 **智能文档校正** — 自动边缘检测与透视校正，适用于拍照的发票/票据（Scanic WASM 引擎）
-- 🔄 **智能上传模式** — 首页上传替换模式，编辑页追加模式
+- 🔄 **智能上传模式** — 首页上传替换模式，编辑页追加模式，一键过滤重复文件
 - 📜 **隐私政策与免责声明** — 独立的法律透明页面
 - ☕ **打赏支持** — 支付宝 / 微信支付
 
@@ -74,7 +77,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/cdk1025/smart_ticket.git
+git clone https://github.com/flashlab/smart_ticket.git
 cd smart_ticket
 
 # 安装依赖
@@ -88,11 +91,13 @@ npm run dev
 
 ### 📦 部署
 
-本项目已配置 **GitHub Pages** 部署：
+本项目已配置 **Cloudflare Pages** 部署：
 
 ```bash
 npm run deploy
 ```
+
+使用 `npx wrangler` 登录账号, 确保已存在名为`smart-ticket`的 CF Pages 项目（控制台手动创建或执行 `wrangler pages project create smart-ticket`）。
 
 ### 🗺️ 开发计划
 
@@ -106,20 +111,3 @@ npm run deploy
 
 本项目基于 [MIT 协议](LICENSE) 开源。
 
-## 🙏 致谢
-
-- [LINUX DO](https://linux.do/) — 社区支持与灵感来源
-
----
-
-<div align="center">
-
-## ☕ 打赏支持
-
-如果这个项目对你有帮助，欢迎打赏支持！
-
-| 支付宝 | 微信支付 |
-|:---:|:---:|
-| <img src="src/assets/ali_pay.jpg" width="200"> | <img src="src/assets/wx_pay.png" width="200"> |
-
-</div>

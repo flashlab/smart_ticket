@@ -10,17 +10,23 @@ const PDFJS_STANDARD_FONT_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205
 const MAX_THUMB_WIDTH = 200
 const MAX_THUMB_HEIGHT = 280
 
+export interface ThumbnailResult {
+  thumbnailUrl: string
+  pageCount?: number
+}
+
 /**
  * Generate a thumbnail data URL for a given file.
- * Supports images (JPEG, PNG) and PDFs.
+ * Supports images (JPEG, PNG) and PDFs. PDFs also report total page count.
  */
-export async function generateThumbnail(file: File): Promise<string> {
+export async function generateThumbnail(file: File): Promise<ThumbnailResult> {
   if (file.type === 'application/pdf') {
     return generatePdfThumbnail(file)
   }
 
   if (file.type.startsWith('image/')) {
-    return generateImageThumbnail(file)
+    const thumbnailUrl = await generateImageThumbnail(file)
+    return { thumbnailUrl }
   }
 
   throw new Error(`Unsupported file type: ${file.type}`)
@@ -45,7 +51,7 @@ async function generateImageThumbnail(file: File): Promise<string> {
   }
 }
 
-async function generatePdfThumbnail(file: File): Promise<string> {
+async function generatePdfThumbnail(file: File): Promise<ThumbnailResult> {
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({
     data: arrayBuffer,
@@ -53,6 +59,7 @@ async function generatePdfThumbnail(file: File): Promise<string> {
     cMapPacked: true,
     standardFontDataUrl: PDFJS_STANDARD_FONT_URL,
   }).promise
+  const pageCount = pdf.numPages
   const page = await pdf.getPage(1)
 
   const unscaledViewport = page.getViewport({ scale: 1 })
@@ -70,7 +77,7 @@ async function generatePdfThumbnail(file: File): Promise<string> {
   const ctx = canvas.getContext('2d')!
   await page.render({ canvasContext: ctx, viewport, canvas }).promise
 
-  return canvas.toDataURL('image/png')
+  return { thumbnailUrl: canvas.toDataURL('image/png'), pageCount }
 }
 
 function fitDimensions(

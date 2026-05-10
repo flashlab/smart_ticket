@@ -8,7 +8,7 @@ export default defineConfig({
     UnoCSS(),
     react(),
   ],
-  base: '/smart_ticket/',
+  base: '/',
   test: {
     globals: true,
     environment: 'jsdom',

@@ -17,7 +17,7 @@ export default function Header() {
       <div className="flex-1" />
 
       <a
-        href="https://github.com/cdk1025/smart_ticket"
+        href="https://github.com/flashlab/smart_ticket"
         target="_blank"
         rel="noopener noreferrer"
         className="text-gray-500 hover:text-blue-600 transition-colors"

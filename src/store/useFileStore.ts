@@ -13,9 +13,13 @@ interface FileStore {
   addFiles: (files: UploadedFile[]) => void
   replaceFiles: (files: UploadedFile[]) => void
   removeFile: (id: string) => void
+  removeDuplicates: () => void
   reorderFiles: (files: UploadedFile[]) => void
   rotateFile: (id: string) => void
-  updateFile: (id: string, updates: Partial<Pick<UploadedFile, 'file' | 'name' | 'thumbnailUrl'>>) => void
+  updateFile: (
+    id: string,
+    updates: Partial<Pick<UploadedFile, 'file' | 'name' | 'thumbnailUrl' | 'qrContent'>>
+  ) => void
   setMergedPdf: (url: string, bytes: Uint8Array) => void
   setEnhanceOptions: (options: Partial<EnhanceOptions>) => void
   resetEnhanceOptions: () => void
@@ -30,11 +34,23 @@ const initialState = {
   enhanceOptions: { ...defaultEnhanceOptions } as EnhanceOptions,
 }
 
+function computeDupFlags(files: UploadedFile[]): UploadedFile[] {
+  const counts = new Map<string, number>()
+  for (const f of files) {
+    counts.set(f.hash, (counts.get(f.hash) ?? 0) + 1)
+  }
+  return files.map((f) => {
+    const isDup = (counts.get(f.hash) ?? 0) > 1
+    if (isDup === Boolean(f.dup)) return f
+    return { ...f, dup: isDup }
+  })
+}
+
 export const useFileStore = create<FileStore>((set, get) => ({
   ...initialState,
 
   addFiles: (newFiles) => {
-    set((state) => ({ files: [...state.files, ...newFiles] }))
+    set((state) => ({ files: computeDupFlags([...state.files, ...newFiles]) }))
   },
 
   replaceFiles: (newFiles) => {
@@ -45,7 +61,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
     if (mergedPdfUrl) {
       URL.revokeObjectURL(mergedPdfUrl)
     }
-    set({ files: newFiles, mergedPdfUrl: null, mergedPdfBytes: null })
+    set({ files: computeDupFlags(newFiles), mergedPdfUrl: null, mergedPdfBytes: null })
   },
 
   removeFile: (id) => {
@@ -53,7 +69,22 @@ export const useFileStore = create<FileStore>((set, get) => ({
     if (file) {
       URL.revokeObjectURL(file.thumbnailUrl)
     }
-    set((state) => ({ files: state.files.filter((f) => f.id !== id) }))
+    set((state) => ({ files: computeDupFlags(state.files.filter((f) => f.id !== id)) }))
+  },
+
+  removeDuplicates: () => {
+    const { files } = get()
+    const seen = new Set<string>()
+    const survivors: UploadedFile[] = []
+    for (const f of files) {
+      if (seen.has(f.hash)) {
+        URL.revokeObjectURL(f.thumbnailUrl)
+        continue
+      }
+      seen.add(f.hash)
+      survivors.push(f)
+    }
+    set({ files: computeDupFlags(survivors) })
   },
 
   reorderFiles: (files) => {

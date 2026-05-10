@@ -11,13 +11,14 @@
     "test": "vitest",
     "test:run": "vitest run",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "wrangler pages deploy dist --project-name=smart-ticket --commit-dirty=true"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "file-saver": "^2.0.5",
+    "jsqr": "^1.4.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.6.205",
     "react": "^19.2.5",
@@ -40,13 +41,13 @@
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "gh-pages": "^6.3.0",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "unocss": "^66.6.8",
     "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "wrangler": "^4.90.0"
   }
 }

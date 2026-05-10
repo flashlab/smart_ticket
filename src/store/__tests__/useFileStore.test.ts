@@ -6,10 +6,12 @@ const revokeObjectURLSpy = vi.fn()
 globalThis.URL.revokeObjectURL = revokeObjectURLSpy
 
 function createMockFile(overrides: Partial<UploadedFile> = {}): UploadedFile {
+  const id = overrides.id ?? 'file-1'
   return {
-    id: 'file-1',
+    id,
     file: new File(['test'], 'test.png', { type: 'image/png' }),
     name: 'test.png',
+    hash: `hash-${id}`,
     type: 'image',
     thumbnailUrl: 'blob:http://localhost/thumb-1',
     rotation: 0,

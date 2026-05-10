@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useFileStore } from '../store/useFileStore'
 import { generateThumbnail } from '../utils/thumbnailGenerator'
+import { sha256Hex } from '../utils/fileHash'
+import LoadingOverlay from './LoadingOverlay'
 import type { UploadedFile } from '../types'
 
 interface FileUploaderProps {
@@ -14,6 +16,7 @@ const VALID_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png'])
 export default function FileUploader({ onFilesAdded }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
@@ -40,22 +43,29 @@ export default function FileUploader({ onFilesAdded }: FileUploaderProps) {
       }
 
       setIsProcessing(true)
+      setProgress({ current: 0, total: files.length })
       try {
-        const uploadedFiles: UploadedFile[] = await Promise.all(
-          files.map(async (file) => {
-            const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-            const type = ext === 'pdf' ? 'pdf' : 'image'
-            const thumbnailUrl = await generateThumbnail(file)
-            return {
-              id: crypto.randomUUID(),
-              file,
-              name: file.name,
-              type,
-              thumbnailUrl,
-              rotation: 0,
-            } as UploadedFile
+        const uploadedFiles: UploadedFile[] = []
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i]
+          const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+          const type = ext === 'pdf' ? 'pdf' : 'image'
+          const [thumb, hash] = await Promise.all([
+            generateThumbnail(file),
+            sha256Hex(file),
+          ])
+          uploadedFiles.push({
+            id: crypto.randomUUID(),
+            file,
+            name: file.name,
+            hash,
+            type,
+            thumbnailUrl: thumb.thumbnailUrl,
+            pageCount: thumb.pageCount,
+            rotation: 0,
           })
-        )
+          setProgress({ current: i + 1, total: files.length })
+        }
 
         replaceFiles(uploadedFiles)
         onFilesAdded?.()
@@ -64,6 +74,7 @@ export default function FileUploader({ onFilesAdded }: FileUploaderProps) {
         console.error('Failed to process files:', err)
       } finally {
         setIsProcessing(false)
+        setProgress(null)
       }
     },
     [replaceFiles, navigate, onFilesAdded]
@@ -108,59 +119,60 @@ export default function FileUploader({ onFilesAdded }: FileUploaderProps) {
   }
 
   return (
-    <div
-      onClick={handleClick}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`relative min-h-50 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-        isDragging
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-300 bg-gray-50/50 hover:border-blue-400 hover:bg-blue-50/30'
-      }`}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={ACCEPT}
-        multiple
-        onChange={handleInputChange}
-        className="hidden"
-      />
+    <>
+      <div
+        onClick={handleClick}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative min-h-50 flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+          isDragging
+            ? 'border-blue-500 bg-blue-50'
+            : 'border-gray-300 bg-gray-50/50 hover:border-blue-400 hover:bg-blue-50/30'
+        }`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept={ACCEPT}
+          multiple
+          onChange={handleInputChange}
+          className="hidden"
+        />
 
-      {isProcessing ? (
-        <>
-          <div className="i-carbon-renew w-10 h-10 text-blue-500 animate-spin" />
-          <p className="text-sm text-gray-500">正在处理文件…</p>
-        </>
-      ) : (
-        <>
-          <svg
-            className="w-12 h-12 text-blue-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M12 16V4m0 0l-4 4m4-4l4 4M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4"
-            />
-          </svg>
-          <p className="text-base text-gray-600 font-medium">
-            拖拽文件到此处，或点击上传
-          </p>
-          <p className="text-xs text-gray-400">支持 PDF、JPG、PNG 格式</p>
-        </>
-      )}
-
-      {errorMsg && (
-        <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-red-500 font-medium">
-          {errorMsg}
+        <svg
+          className="w-12 h-12 text-blue-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M12 16V4m0 0l-4 4m4-4l4 4M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4"
+          />
+        </svg>
+        <p className="text-base text-gray-600 font-medium">
+          拖拽文件到此处，或点击上传
         </p>
+        <p className="text-xs text-gray-400">支持 PDF、JPG、PNG 格式</p>
+
+        {errorMsg && (
+          <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-red-500 font-medium">
+            {errorMsg}
+          </p>
+        )}
+      </div>
+
+      {isProcessing && (
+        <LoadingOverlay
+          message="正在加载文件"
+          current={progress?.current}
+          total={progress?.total}
+        />
       )}
-    </div>
+    </>
   )
 }

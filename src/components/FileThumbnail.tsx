@@ -4,15 +4,30 @@ interface FileThumbnailProps {
   file: UploadedFile
   onRemove: (id: string) => void
   onRotate: (id: string) => void
+  onPreview?: (id: string) => void
   dragHandleProps?: Record<string, unknown>
+}
+
+const TAIL_LEN = 8
+
+function splitName(name: string): { head: string; tail: string } {
+  if (name.length <= TAIL_LEN + 1) return { head: '', tail: name }
+  return {
+    head: name.slice(0, name.length - TAIL_LEN),
+    tail: name.slice(name.length - TAIL_LEN),
+  }
 }
 
 export default function FileThumbnail({
   file,
   onRemove,
   onRotate,
+  onPreview,
   dragHandleProps,
 }: FileThumbnailProps) {
+  const { head, tail } = splitName(file.name)
+  const isMultiPage = file.type === 'pdf' && (file.pageCount ?? 1) > 1
+
   return (
     <div className="relative flex flex-col rounded-xl bg-white shadow-sm border border-gray-100 overflow-hidden">
       {/* Drag handle */}
@@ -36,7 +51,12 @@ export default function FileThumbnail({
       </div>
 
       {/* Thumbnail */}
-      <div className="flex items-center justify-center h-40 bg-gray-50 p-2 overflow-hidden">
+      <button
+        type="button"
+        className="flex w-full items-center justify-center h-40 bg-gray-50 p-2 overflow-hidden cursor-zoom-in hover:bg-gray-100 transition-colors"
+        onClick={() => onPreview?.(file.id)}
+        title="点击放大预览"
+      >
         <img
           src={file.thumbnailUrl}
           alt={file.name}
@@ -44,13 +64,24 @@ export default function FileThumbnail({
           style={{ transform: `rotate(${file.rotation}deg)` }}
           draggable={false}
         />
-      </div>
+      </button>
 
-      {/* File name */}
-      <div className="px-3 py-2 border-t border-gray-50">
-        <p className="truncate text-xs text-gray-700" title={file.name}>
-          {file.name}
-        </p>
+      {/* File name with badges */}
+      <div className="px-3 py-2 border-t border-gray-50 flex items-center gap-1 text-xs text-gray-700">
+        {file.dup && (
+          <span className="shrink-0 rounded bg-amber-100 text-amber-700 px-1.5 py-0.5 text-[10px] font-medium leading-none">
+            重复
+          </span>
+        )}
+        {isMultiPage && (
+          <span className="shrink-0 rounded bg-blue-100 text-blue-700 px-1.5 py-0.5 text-[10px] font-medium leading-none">
+            多页
+          </span>
+        )}
+        <span className="flex min-w-0 flex-1 items-center" title={file.name}>
+          <span className="truncate">{head}</span>
+          <span className="shrink-0">{tail}</span>
+        </span>
       </div>
 
       {/* Actions */}
