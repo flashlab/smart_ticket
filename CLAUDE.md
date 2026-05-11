@@ -69,3 +69,7 @@ Clicking a thumbnail opens a fade+scale modal. Images use `URL.createObjectURL`;
 - Deploy target is **Cloudflare Pages** (project `smart-ticket`) served at the root. Vite `base: '/'`. Absolute asset paths in `index.html` should reference `/foo` directly; for code-side asset references prefer Vite's `?url` / `import.meta.env.BASE_URL` so the path stays correct if `base` ever changes again.
 - Drag-and-drop uses `@dnd-kit` (not react-dnd). The sortable list is `src/components/SortableFileList.tsx`.
 - Privacy claim ("100% local, never uploaded") is load-bearing for the product — do not introduce network calls for file content. The only external network usage today is the pdfjs CDN (CMap + standard fonts).
+
+## Future Plan
+
+Extract more information from PDF and image invoices. (https://www.lkbiao.com/developer/invoice-qr-parser as reference)

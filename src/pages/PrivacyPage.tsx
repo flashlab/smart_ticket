@@ -23,12 +23,10 @@ export default function PrivacyPage() {
       <p className="mb-8 text-gray-700">
         如有任何疑问或建议，请通过{' '}
         <a
-          href="https://github.com"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="mailto:598271130@qq.com"
           className="text-blue-600 hover:underline"
         >
-          GitHub Issues
+          Flora Peng
         </a>{' '}
         与我们联系。
       </p>
